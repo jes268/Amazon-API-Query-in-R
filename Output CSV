@@ -2,9 +2,9 @@
 #and this: http://stackoverflow.com/questions/8251632/amazon-product-api-with-r
 
 #Credentials for connecting to the Amazon Product API:
-AWSAccessKeyId <- "AKIAJ3EUTHNHY34PR2JA"
-AWSsecretkey <- "O6PFdkiiHdSc4UEvukY22B6UOlP4/PuoY4Q0dp5B" 
-AssociateTag <- "sols1-20" 
+AWSAccessKeyId <- "REDACTED"
+AWSsecretkey <- "REDACTED" 
+AssociateTag <- "REDACTED" 
 
 
 
