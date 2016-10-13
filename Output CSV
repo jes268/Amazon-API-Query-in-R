@@ -1,0 +1,172 @@
+#based on this: http://daisungjang.com/tutorial/Amazon_tutorial.html
+#and this: http://stackoverflow.com/questions/8251632/amazon-product-api-with-r
+
+#Credentials for connecting to the Amazon Product API:
+AWSAccessKeyId <- "AKIAJ3EUTHNHY34PR2JA"
+AWSsecretkey <- "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" 
+AssociateTag <- "sols1-20" 
+
+
+
+#Defines the function used to query the API. 
+search.amazon <- function(Keywords, SearchIndex = 'All', AWSAccessKeyId, 
+                          AWSsecretkey, AssociateTag, 
+                          ResponseGroup = 'Large', 
+                          Operation = 'ItemSearch',
+                          Brand = 'Nike',
+                          ItemPage = '1',
+                          Sort = 'Sort'){
+  library(digest)
+  library(RCurl)
+  
+  base.html.string <- "http://ecs.amazonaws.com/onca/xml?"
+  SearchIndex <- match.arg(SearchIndex, c('All',
+                                          'Shoes'))
+  
+  Operation <- match.arg(Operation, c('ItemSearch',
+                                      'ItemLookup',
+                                      'BrowseNodeLookup',
+                                      'CartAdd',
+                                      'CartClear',
+                                      'CartCreate',
+                                      'CartGet',
+                                      'CartModify',
+                                      'SimilarityLookup'))
+  
+  ResponseGroup <- match.arg(ResponseGroup, c('Accessories',
+                                              'AlternateVersions',
+                                              'BrowseNodeInfo',
+                                              'BrowseNodes',
+                                              'Cart',
+                                              'CartNewReleases',
+                                              'CartTopSellers',
+                                              'CartSimilarities',
+                                              'Collections',
+                                              'EditorialReview',
+                                              'Images',
+                                              'ItemAttributes',
+                                              'ItemIds',
+                                              'Large',
+                                              'Medium',
+                                              'MostGifted',
+                                              'MostWishedFor',
+                                              'NewReleases',
+                                              'OfferFull',
+                                              'OfferListings',
+                                              'Offers',
+                                              'OfferSummary',
+                                              'PromotionSummary',
+                                              'RelatedItems',
+                                              'Request',
+                                              'Reviews',
+                                              'SalesRank',
+                                              'SearchBins',
+                                              'Similarities',
+                                              'Small',
+                                              'TopSellers',
+                                              'Tracks',
+                                              'Variations',
+                                              'VariationImages',
+                                              'VariationMatrix',
+                                              'VariationOffers',
+                                              'VariationSummary'),
+                             several.ok = TRUE)
+  
+  Sort <- match.arg(Sort, c('price',
+                            '-price',
+                            'relevance',
+                            'salesrank',
+                            'relevancerank',
+                            'popularity-rank',
+                            'reviewrank',
+                            '-reviewrank_authority'))
+  
+  version.request = '2011-08-01'
+  Service = 'AWSECommerceService'
+  if(!is.character(AWSsecretkey)){
+    message('The AWSsecretkey should be entered as a character vect, ie be qouted')
+  }
+  
+  pb.txt <- Sys.time()
+  
+  pb.date <- as.POSIXct(pb.txt, tz = Sys.timezone)
+  
+  Timestamp = strtrim(format(pb.date, tz = "GMT", usetz = TRUE, "%Y-%m-%dT%H:%M:%S.000Z"), 24)
+  
+  #the string to build the unsigned url 
+  str = paste('GET\necs.amazonaws.com\n/onca/xml\n',
+              'AWSAccessKeyId=', curlEscape(AWSAccessKeyId),
+              '&AssociateTag=', AssociateTag,
+              '&Brand=', curlEscape(Brand),
+              '&ItemPage=', curlEscape(ItemPage),
+              '&Keywords=', curlEscape(Keywords),
+              '&Operation=', curlEscape(Operation),
+              '&ResponseGroup=', curlEscape(ResponseGroup),
+              '&SearchIndex=', curlEscape(SearchIndex),
+              '&Service=AWSECommerceService',
+              '&Sort=', curlEscape(Sort),              
+              '&Timestamp=', gsub('%2E','.',gsub('%2D', '-', curlEscape(Timestamp))),
+              '&Version=', version.request,
+              sep = '')
+  
+  ## encodes the signature based off the unsigned url
+  Signature = curlEscape(base64(hmac( enc2utf8(AWSsecretkey), 
+                                      enc2utf8(str), algo = 'sha256', 
+                                      serialize = FALSE, raw = TRUE)))  
+  
+  ## assembling the signed url
+  str2 = paste('http://ecs.amazonaws.com/onca/xml?',
+               'AWSAccessKeyId=', curlEscape(AWSAccessKeyId),
+               '&AssociateTag=', AssociateTag,
+               '&Brand=', curlEscape(Brand),
+               '&ItemPage=', curlEscape(ItemPage),
+               '&Keywords=', curlEscape(Keywords),
+               '&Operation=', curlEscape(Operation),
+               '&ResponseGroup=', curlEscape(ResponseGroup),
+               '&SearchIndex=', curlEscape(SearchIndex),
+               '&Service=AWSECommerceService',
+               '&Sort=', curlEscape(Sort),              
+               '&Timestamp=', gsub('%2E','.',gsub('%2D', '-', curlEscape(Timestamp))),
+               '&Version=', version.request,
+               sep = '')
+  
+  
+  AmazonURL <- paste(str2, '&Signature=', Signature, sep = '')
+  AmazonResult <- getURL(AmazonURL)
+  
+  #option to print the signed Amazon URL for debugging
+  #print(AmazonURL)
+  
+  return(AmazonResult)
+}
+
+#for (i in 0:(2*N)) {
+#  for (j in i:N) {
+#    print(paste(i,j,sep=","))
+
+#Beginning of For Loop to query API multiple times
+for(brand in c("Nike","Hush Puppies")){
+  for(page in c(1:2)){
+  
+#*****ENTER SEARCH TERMS HERE*******
+data <- search.amazon(Brand = brand, Keywords = "", SearchIndex = 'Shoes', 
+                      AWSAccessKeyId, AWSsecretkey, AssociateTag, 
+                      ResponseGroup = 'ItemAttributes', Sort = 'reviewrank', Operation = 'ItemSearch', ItemPage = page)
+library(XML)
+library(plyr)
+
+xml_data = xmlParse(data)
+xmltop = xmlRoot(xml_data) 
+class(xmltop)
+
+#option to print the 1st and 2nd sections of the xml data
+#print(xmltop[1])
+#print(xmltop[2])
+
+node.2 <- xmltop[[2]]
+query_results <- ldply(xmlToList(node.2), data.frame) 
+query_results <- query_results[5:14,]
+data_tab <- query_results[,c("ItemAttributes.Brand","ItemAttributes.Title","ASIN")]
+results <- write.table(data_tab, "/Users/jeffsmith/Documents/R/Amazon Output.csv", append = TRUE, sep = ";", col.names = FALSE)}}
+
+
